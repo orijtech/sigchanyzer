@@ -1,0 +1,11 @@
+func g() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	_ = <-c
+}
+
+func h() {
+	c := make(chan ao.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	_ = <-c
+}
