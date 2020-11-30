@@ -17,9 +17,9 @@ package main
 import (
 	"golang.org/x/tools/go/analysis/singlechecker"
 
-	"github.com/orijtech/signalchan"
+	"github.com/orijtech/sigchanyzer"
 )
 
 func main() {
-	singlechecker.Main(signalchan.Analyzer)
+	singlechecker.Main(sigchanyzer.Analyzer)
 }

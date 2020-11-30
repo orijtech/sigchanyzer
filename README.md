@@ -1,8 +1,8 @@
-# signalchan
+# sigchanyzer
 
-![Build status](https://github.com/orijtech/signalchan/workflows/Go/badge.svg?branch=master)
+![Build status](https://github.com/orijtech/sigchanyzer/workflows/Go/badge.svg?branch=master)
 
-Package signalchan defines an [Analyzer](analyzer_link) that checks usage of unbuffered os.Signal channel, which can be at
+Package sigchanyzer defines an [Analyzer](analyzer_link) that checks usage of unbuffered os.Signal channel, which can be at
 risk of missing the signal.
 
 ## Installation
@@ -10,40 +10,40 @@ risk of missing the signal.
 With Go modules:
 
 ```sh
-go get github.com/orijtech/signalchan/cmd/signalchan
+go get github.com/orijtech/sigchanyzer/cmd/sigchanyzer
 ```
 
 Without Go modules:
 
 ```sh
-$ cd $GOPATH/src/github.com/orijtech/signalchan
+$ cd $GOPATH/src/github.com/orijtech/sigchanyzer
 $ git checkout v0.0.1
 $ go get
-$ install ./cmd/signalchan
+$ install ./cmd/sigchanyzer
 ```
 
 ## Usage
 
-You can run `signalchan` either on a Go package or Go files, the same way as
+You can run `sigchanyzer` either on a Go package or Go files, the same way as
 other Go tools work.
 
 Example:
 
 ```sh
-$ signalchan github.com/orijtech/signalchan/testdata/src/a
+$ sigchanyzer github.com/orijtech/sigchanyzer/testdata/src/a
 ```
 
 or:
 
 ```sh
-$ signalchan ./testdata/src/a/a.go
+$ sigchanyzer ./testdata/src/a/a.go
 ```
 
 Sample output:
 
 ```text
-/go/src/github.com/orijtech/signalchan/testdata/a/a.go:16:7: unbuffered os.Signal channel
-/go/src/github.com/orijtech/signalchan/testdata/a/a.go:22:7: unbuffered os.Signal channel
+/go/src/github.com/orijtech/sigchanyzer/testdata/a/a.go:16:7: unbuffered os.Signal channel
+/go/src/github.com/orijtech/sigchanyzer/testdata/a/a.go:22:7: unbuffered os.Signal channel
 ```
  
 ## Development

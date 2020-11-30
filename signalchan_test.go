@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package signalchan_test
+package sigchanyzer_test
 
 import (
 	"testing"
 
 	"golang.org/x/tools/go/analysis/analysistest"
 
-	"github.com/orijtech/signalchan"
+	"github.com/orijtech/sigchanyzer"
 )
 
 func Test(t *testing.T) {
 	testdata := analysistest.TestData()
-	analysistest.RunWithSuggestedFixes(t, testdata, signalchan.Analyzer, "a")
+	analysistest.RunWithSuggestedFixes(t, testdata, sigchanyzer.Analyzer, "a")
 }
