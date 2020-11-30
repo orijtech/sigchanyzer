@@ -19,13 +19,14 @@ import (
 	"go/ast"
 	"go/format"
 	"go/token"
+	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-const Doc = `check for unbuffer channel of os.Signal, which can be at risk of missing the signal.`
+const Doc = `check for unbuffered channel of os.Signal, which can be at risk of missing the signal.`
 
 // Analyzer describes struct slop analysis function detector.
 var Analyzer = &analysis.Analyzer{
@@ -43,46 +44,80 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 	inspect.Preorder(nodeFilter, func(n ast.Node) {
 		call := n.(*ast.CallExpr)
-		if len(call.Args) != 1 {
+		if !isSignalNotify(pass.TypesInfo, call) {
 			return
 		}
-		ch, ok := call.Args[0].(*ast.ChanType)
-		if !ok {
-			return
+		var chanDecl *ast.CallExpr
+		switch arg := call.Args[0].(type) {
+		case *ast.Ident:
+			if decl, ok := findDecl(arg).(*ast.CallExpr); ok {
+				chanDecl = decl
+			}
+		case *ast.CallExpr:
+			chanDecl = arg
 		}
-		if pass.TypesInfo.Types[ch].Type.String() != "chan os.Signal" {
-			return
-		}
-
-		id, ok := call.Fun.(*ast.Ident)
-		if !ok || id == nil {
-			return
-		}
-		if id.Name != "make" || !pass.TypesInfo.Types[id].IsBuiltin() {
-			return
-		}
-		call.Args = append(call.Args, &ast.BasicLit{
-			Kind:  token.INT,
-			Value: "1",
-		})
-
-		var buf bytes.Buffer
-		if err := format.Node(&buf, token.NewFileSet(), call); err != nil {
-			return
-		}
-		pass.Report(analysis.Diagnostic{
-			Pos:     call.Pos(),
-			End:     call.End(),
-			Message: "unbuffer os.Signal channel",
-			SuggestedFixes: []analysis.SuggestedFix{{
-				Message: "change to buffer channel.",
-				TextEdits: []analysis.TextEdit{{
-					Pos:     call.Pos(),
-					End:     call.End(),
-					NewText: buf.Bytes(),
+		if chanDecl != nil && len(chanDecl.Args) == 1 {
+			chanDecl.Args = append(chanDecl.Args, &ast.BasicLit{
+				Kind:  token.INT,
+				Value: "1",
+			})
+			var buf bytes.Buffer
+			if err := format.Node(&buf, token.NewFileSet(), chanDecl); err != nil {
+				return
+			}
+			pass.Report(analysis.Diagnostic{
+				Pos:     call.Pos(),
+				End:     call.End(),
+				Message: "misuse of unbuffered os.Signal channel as argument to signal.Notify",
+				SuggestedFixes: []analysis.SuggestedFix{{
+					Message: "Change to buffer channel",
+					TextEdits: []analysis.TextEdit{{
+						Pos:     chanDecl.Pos(),
+						End:     chanDecl.End(),
+						NewText: buf.Bytes(),
+					}},
 				}},
-			}},
-		})
+			})
+		}
 	})
 	return nil, nil
+}
+
+func isSignalNotify(info *types.Info, call *ast.CallExpr) bool {
+	switch fun := call.Fun.(type) {
+	// TODO: handle f := signal.Notify case
+	case *ast.SelectorExpr:
+		obj := info.ObjectOf(fun.Sel)
+		return obj.Name() == "Notify" && obj.Pkg().Path() == "os/signal"
+	default:
+		return false
+	}
+}
+
+func findDecl(arg *ast.Ident) ast.Node {
+	switch as := arg.Obj.Decl.(type) {
+	case *ast.AssignStmt:
+		if len(as.Lhs) != len(as.Rhs) {
+			return nil
+		}
+		for i, lhs := range as.Lhs {
+			lid, ok := lhs.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if lid.Obj == arg.Obj {
+				return as.Rhs[i]
+			}
+		}
+	case *ast.ValueSpec:
+		if len(as.Names) != len(as.Values) {
+			return nil
+		}
+		for i, name := range as.Names {
+			if name.Obj == arg.Obj {
+				return as.Values[i]
+			}
+		}
+	}
+	return nil
 }

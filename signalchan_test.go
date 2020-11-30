@@ -24,5 +24,5 @@ import (
 
 func Test(t *testing.T) {
 	testdata := analysistest.TestData()
-	analysistest.Run(t, testdata, signalchan.Analyzer, "a")
+	analysistest.RunWithSuggestedFixes(t, testdata, signalchan.Analyzer, "a")
 }
