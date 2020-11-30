@@ -2,7 +2,7 @@
 
 ![Build status](https://github.com/orijtech/signalchan/workflows/Go/badge.svg?branch=master)
 
-Package signalchan defines an [Analyzer](analyzer_link) that checks usage of unbuffer os.Signal channel, which can be at
+Package signalchan defines an [Analyzer](analyzer_link) that checks usage of unbuffered os.Signal channel, which can be at
 risk of missing the signal.
 
 ## Installation
@@ -42,8 +42,8 @@ $ signalchan ./testdata/src/a/a.go
 Sample output:
 
 ```text
-/go/src/github.com/orijtech/signalchan/testdata/a/a.go:16:7: unbuffer os.Signal channel
-/go/src/github.com/orijtech/signalchan/testdata/a/a.go:22:7: unbuffer os.Signal channel
+/go/src/github.com/orijtech/signalchan/testdata/a/a.go:16:7: unbuffered os.Signal channel
+/go/src/github.com/orijtech/signalchan/testdata/a/a.go:22:7: unbuffered os.Signal channel
 ```
  
 ## Development
