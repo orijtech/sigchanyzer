@@ -1,4 +1,4 @@
-module github.com/orijtech/signalchan
+module github.com/orijtech/sigchanyzer
 
 go 1.15
 

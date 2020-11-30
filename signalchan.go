@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package signalchan
+package sigchanyzer
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ const Doc = `check for unbuffered channel of os.Signal, which can be at risk of 
 
 // Analyzer describes struct slop analysis function detector.
 var Analyzer = &analysis.Analyzer{
-	Name:     "signalchan",
+	Name:     "sigchanyzer",
 	Doc:      Doc,
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 	Run:      run,
