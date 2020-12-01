@@ -17,7 +17,7 @@ Without Go modules:
 
 ```sh
 $ cd $GOPATH/src/github.com/orijtech/sigchanyzer
-$ git checkout v0.0.1
+$ git checkout v0.0.2
 $ go get
 $ install ./cmd/sigchanyzer
 ```
