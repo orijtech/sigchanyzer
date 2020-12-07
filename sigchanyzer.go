@@ -56,45 +56,56 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		case *ast.CallExpr:
 			chanDecl = arg
 		}
-		if chanDecl != nil && len(chanDecl.Args) == 1 {
-			chanDecl.Args = append(chanDecl.Args, &ast.BasicLit{
-				Kind:  token.INT,
-				Value: "1",
-			})
-			var buf bytes.Buffer
-			if err := format.Node(&buf, token.NewFileSet(), chanDecl); err != nil {
-				return
-			}
-			pass.Report(analysis.Diagnostic{
-				Pos:     call.Pos(),
-				End:     call.End(),
-				Message: "misuse of unbuffered os.Signal channel as argument to signal.Notify",
-				SuggestedFixes: []analysis.SuggestedFix{{
-					Message: "Change to buffer channel",
-					TextEdits: []analysis.TextEdit{{
-						Pos:     chanDecl.Pos(),
-						End:     chanDecl.End(),
-						NewText: buf.Bytes(),
-					}},
-				}},
-			})
+		if chanDecl == nil || len(chanDecl.Args) != 1 {
+			return
 		}
+		chanDecl.Args = append(chanDecl.Args, &ast.BasicLit{
+			Kind:  token.INT,
+			Value: "1",
+		})
+		var buf bytes.Buffer
+		if err := format.Node(&buf, token.NewFileSet(), chanDecl); err != nil {
+			return
+		}
+		pass.Report(analysis.Diagnostic{
+			Pos:     call.Pos(),
+			End:     call.End(),
+			Message: "misuse of unbuffered os.Signal channel as argument to signal.Notify",
+			SuggestedFixes: []analysis.SuggestedFix{{
+				Message: "Change to buffer channel",
+				TextEdits: []analysis.TextEdit{{
+					Pos:     chanDecl.Pos(),
+					End:     chanDecl.End(),
+					NewText: buf.Bytes(),
+				}},
+			}},
+		})
 	})
 	return nil, nil
 }
 
 func isSignalNotify(info *types.Info, call *ast.CallExpr) bool {
-	switch fun := call.Fun.(type) {
-	// TODO: handle f := signal.Notify case
-	case *ast.SelectorExpr:
-		obj := info.ObjectOf(fun.Sel)
+	check := func(id *ast.Ident) bool {
+		obj := info.ObjectOf(id)
 		return obj.Name() == "Notify" && obj.Pkg().Path() == "os/signal"
+	}
+	switch fun := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		return check(fun.Sel)
+	case *ast.Ident:
+		if fun, ok := findDecl(fun).(*ast.SelectorExpr); ok {
+			return check(fun.Sel)
+		}
+		return false
 	default:
 		return false
 	}
 }
 
 func findDecl(arg *ast.Ident) ast.Node {
+	if arg.Obj == nil {
+		return nil
+	}
 	switch as := arg.Obj.Decl.(type) {
 	case *ast.AssignStmt:
 		if len(as.Lhs) != len(as.Rhs) {

@@ -29,7 +29,10 @@ func h() {
 
 func i() {
 	signal.Notify(d, os.Interrupt) // want "misuse of unbuffered os.Signal channel as argument to signal.Notify"
+}
+
+func j() {
+	c := make(chan os.Signal)
 	f := signal.Notify
-	// BAD: this should be warned
-	f(d, os.Interrupt)
+	f(c, os.Interrupt) // want "misuse of unbuffered os.Signal channel as argument to signal.Notify"
 }
