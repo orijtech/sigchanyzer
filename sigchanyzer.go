@@ -48,17 +48,25 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 		var chanDecl *ast.CallExpr
+
+		// track whether call.Args[0] is a *ast.CallExpr. This is true when make(chan os.Signal) is passed directly to signal.Notify
+		wasCallExpr := false
+
 		switch arg := call.Args[0].(type) {
 		case *ast.Ident:
 			if decl, ok := findDecl(arg).(*ast.CallExpr); ok {
 				chanDecl = decl
+				wasCallExpr = false
 			}
 		case *ast.CallExpr:
 			chanDecl = arg
+			wasCallExpr = true
 		}
-		if chanDecl == nil || len(chanDecl.Args) != 1 {
+
+		if chanDecl == nil || len(chanDecl.Args) != 1 || wasCallExpr {
 			return
 		}
+
 		chanDecl.Args = append(chanDecl.Args, &ast.BasicLit{
 			Kind:  token.INT,
 			Value: "1",
