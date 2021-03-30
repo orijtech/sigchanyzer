@@ -50,20 +50,25 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		var chanDecl *ast.CallExpr
 
 		// track whether call.Args[0] is a *ast.CallExpr. This is true when make(chan os.Signal) is passed directly to signal.Notify
-		wasCallExpr := false
+		inlinedChanMake := false
 
 		switch arg := call.Args[0].(type) {
 		case *ast.Ident:
 			if decl, ok := findDecl(arg).(*ast.CallExpr); ok {
 				chanDecl = decl
-				wasCallExpr = false
 			}
 		case *ast.CallExpr:
 			chanDecl = arg
-			wasCallExpr = true
+			inlinedChanMake = true
 		}
 
-		if chanDecl == nil || len(chanDecl.Args) != 1 || wasCallExpr {
+		if chanDecl == nil || len(chanDecl.Args) != 1 {
+			return
+		}
+
+		// There is one exception. If we've got: signal.Notify(make(chan os.Signal), signal)
+		// the Go runtime will write to the channel with a non-blocking send. See https://golang.org/issues/45043
+		if inlinedChanMake {
 			return
 		}
 
