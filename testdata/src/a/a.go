@@ -44,3 +44,11 @@ func k() {
 func l() {
 	signal.Notify(make(chan os.Signal, 1), os.Interrupt) // ok
 }
+
+func m() {
+	signal.Notify(make(chan ao.Signal, 1), os.Interrupt) // ok
+}
+
+func n() {
+	signal.Notify(make(chan ao.Signal), os.Interrupt) // ok
+}
