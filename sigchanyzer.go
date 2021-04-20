@@ -49,24 +49,21 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 		var chanDecl *ast.CallExpr
 
-		// track whether call.Args[0] is a *ast.CallExpr. This is true when make(chan os.Signal) is passed directly to signal.Notify
-		inlinedChanMake := false
-
 		switch arg := call.Args[0].(type) {
 		case *ast.Ident:
 			if decl, ok := findDecl(arg).(*ast.CallExpr); ok {
 				chanDecl = decl
 			}
 		case *ast.CallExpr:
+			// Only signal.Notify(make(chan os.Signal), os.Interrupt) is safe,
+			// conservatively treate others as not safe, see golang/go#45043
+			if isBuiltinMake(pass.TypesInfo, arg) {
+				return
+			}
 			chanDecl = arg
-			inlinedChanMake = true
 		}
 
 		if chanDecl == nil || len(chanDecl.Args) != 1 {
-			return
-		}
-
-		if inlinedChanMake && isMakeCallExpr(pass.TypesInfo, chanDecl) {
 			return
 		}
 
@@ -144,51 +141,15 @@ func findDecl(arg *ast.Ident) ast.Node {
 	return nil
 }
 
-func isMakeCallExpr(info *types.Info, call *ast.CallExpr) bool {
-	ident, ok := call.Fun.(*ast.Ident)
-	if !ok {
+func isBuiltinMake(info *types.Info, call *ast.CallExpr) bool {
+	typVal := info.Types[call.Fun]
+	if !typVal.IsBuiltin() {
 		return false
 	}
-
-	name := ident.Name
-
-	isFirstArgOsSignalType := func(info *types.Info, a1 ast.Expr) bool {
-		cType, ok := a1.(*ast.ChanType)
-		if !ok {
-			return false
-		}
-
-		value := cType.Value
-
-		selExpr, ok := value.(*ast.SelectorExpr)
-		if !ok {
-			return false
-		}
-
-		obj := info.ObjectOf(selExpr.Sel)
-		return obj.Pkg().Path() == "os" && obj.Name() == "Signal"
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		return info.ObjectOf(fun).Name() == "make"
+	default:
+		return false
 	}
-
-	isSecondArgIntOne := func(a2 ast.Expr) bool {
-		bLit, ok := a2.(*ast.BasicLit)
-		if !ok {
-			return false
-		}
-
-		kind := bLit.Kind
-		value := bLit.Value
-
-		return kind == token.INT && value == "1"
-	}
-
-	args := call.Args
-
-	switch len(args) {
-	case 1:
-		return name == "make" && isFirstArgOsSignalType(info, call.Args[0])
-	case 2:
-		return name == "make" && isFirstArgOsSignalType(info, call.Args[0]) && isSecondArgIntOne(call.Args[1])
-	}
-
-	return true
 }
