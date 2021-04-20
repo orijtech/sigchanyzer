@@ -48,7 +48,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 		var chanDecl *ast.CallExpr
-
 		switch arg := call.Args[0].(type) {
 		case *ast.Ident:
 			if decl, ok := findDecl(arg).(*ast.CallExpr); ok {
