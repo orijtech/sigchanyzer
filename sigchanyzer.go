@@ -66,9 +66,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		// There is one exception. If we've got: signal.Notify(make(chan os.Signal), signal)
-		// the Go runtime will write to the channel with a non-blocking send. See https://golang.org/issues/45043
-		if inlinedChanMake {
+		if inlinedChanMake && isMakeCallExpr(pass.TypesInfo, chanDecl) {
 			return
 		}
 
@@ -144,4 +142,53 @@ func findDecl(arg *ast.Ident) ast.Node {
 		}
 	}
 	return nil
+}
+
+func isMakeCallExpr(info *types.Info, call *ast.CallExpr) bool {
+	ident, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return false
+	}
+
+	name := ident.Name
+
+	isFirstArgOsSignalType := func(info *types.Info, a1 ast.Expr) bool {
+		cType, ok := a1.(*ast.ChanType)
+		if !ok {
+			return false
+		}
+
+		value := cType.Value
+
+		selExpr, ok := value.(*ast.SelectorExpr)
+		if !ok {
+			return false
+		}
+
+		obj := info.ObjectOf(selExpr.Sel)
+		return obj.Pkg().Path() == "os" && obj.Name() == "Signal"
+	}
+
+	isSecondArgIntOne := func(a2 ast.Expr) bool {
+		bLit, ok := a2.(*ast.BasicLit)
+		if !ok {
+			return false
+		}
+
+		kind := bLit.Kind
+		value := bLit.Value
+
+		return kind == token.INT && value == "1"
+	}
+
+	args := call.Args
+
+	switch len(args) {
+	case 1:
+		return name == "make" && isFirstArgOsSignalType(info, call.Args[0])
+	case 2:
+		return name == "make" && isFirstArgOsSignalType(info, call.Args[0]) && isSecondArgIntOne(call.Args[1])
+	}
+
+	return true
 }
