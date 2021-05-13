@@ -1,6 +1,6 @@
 # sigchanyzer
 
-![Build status](https://github.com/orijtech/sigchanyzer/workflows/Go/badge.svg?branch=master)
+![Build status](https://github.com/orijtech/sigchanyzer/workflows/Go/badge.svg?branch=main)
 
 Package sigchanyzer defines an [Analyzer](analyzer_link) that checks usage of unbuffered os.Signal channel, which can be at
 risk of missing the signal.
